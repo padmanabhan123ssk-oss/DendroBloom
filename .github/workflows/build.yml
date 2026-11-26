@@ -10,10 +10,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Unzip project (if uploaded as a zip)
+      - name: Show uploaded files
+        run: ls -la
+
+      - name: Unzip project
         run: |
-          if [ -f DendroBloom.zip ]; then unzip -o -q DendroBloom.zip; fi
-          PROJ=$(dirname "$(find . -name settings.gradle | head -1)")
+          for z in *.zip; do
+            [ -f "$z" ] && echo "Unzipping $z" && unzip -o -q "$z"
+          done
+          F=$(find . -name settings.gradle -not -path "./.git/*" | head -1)
+          if [ -z "$F" ]; then
+            echo "ERROR: settings.gradle not found. Upload DendroBloom.zip to the repository."
+            exit 1
+          fi
+          PROJ=$(dirname "$F")
           echo "PROJ=$PROJ" >> "$GITHUB_ENV"
           echo "Project folder: $PROJ"
 
@@ -27,9 +37,10 @@ jobs:
           gradle-version: '8.7'
 
       - name: Build APK
-        run: cd "$PROJ" && gradle assembleDebug --no-daemon
+        run: cd "$PROJ" && gradle assembleDebug --no-daemon --stacktrace
 
       - uses: actions/upload-artifact@v4
         with:
           name: DendroBloom-apk
           path: ${{ env.PROJ }}/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
