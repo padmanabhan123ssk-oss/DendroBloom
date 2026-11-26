@@ -1,0 +1,35 @@
+name: Build APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip project (if uploaded as a zip)
+        run: |
+          if [ -f DendroBloom.zip ]; then unzip -o -q DendroBloom.zip; fi
+          PROJ=$(dirname "$(find . -name settings.gradle | head -1)")
+          echo "PROJ=$PROJ" >> "$GITHUB_ENV"
+          echo "Project folder: $PROJ"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build APK
+        run: cd "$PROJ" && gradle assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DendroBloom-apk
+          path: ${{ env.PROJ }}/app/build/outputs/apk/debug/*.apk
